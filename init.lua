@@ -234,6 +234,9 @@ end
 local rtp = vim.opt.rtp
 rtp:prepend(lazypath)
 
+-- custom keymaps (sahas):
+require('custom.keymaps')
+ 
 -- [[ Configure and install plugins ]]
 --
 --  To check the current status of your plugins, run
@@ -984,9 +987,7 @@ require('lazy').setup({
   --    This is the easiest way to modularize your config.
   { import = 'custom.plugins' },
 
-  -- custom keymaps (sahas):
-  require 'custom.keymaps',
-  -- For additional information with loading, sourcing and examples see `:help lazy.nvim-🔌-plugin-spec`
+ -- For additional information with loading, sourcing and examples see `:help lazy.nvim-🔌-plugin-spec`
   -- Or use telescope!
   -- In normal mode type `<space>sh` then write `lazy.nvim-plugin`
   -- you can continue same window with `<space>sr` which resumes last telescope search
