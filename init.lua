@@ -234,9 +234,6 @@ end
 local rtp = vim.opt.rtp
 rtp:prepend(lazypath)
 
--- custom keymaps (sahas):
-require 'custom.keymaps'
-
 -- [[ Configure and install plugins ]]
 --
 --  To check the current status of your plugins, run
@@ -1014,6 +1011,9 @@ require('lazy').setup({
     },
   },
 })
+
+-- custom keymaps (sahas):
+require 'custom.keymaps'
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
