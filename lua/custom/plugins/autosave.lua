@@ -14,7 +14,6 @@
 -- I had undo/redo issues when using the no longer maintained plugin from pocco81
 -- So make sure you're using the right plugin, which is okuuva/auto-save.nvim
 -- https://github.com/pocco81/auto-save.nvim/issues/70
-print 'auto save plugin loaded'
 -- Autocommand for printing the autosaved message
 local group = vim.api.nvim_create_augroup('autosave', {})
 vim.api.nvim_create_autocmd('User', {
