@@ -4,11 +4,11 @@ vim.keymap.set({ 'n', 'v' }, 'x', '"_x', { desc = 'Delete char without yanking' 
 vim.keymap.set({ 'n', 'v' }, 'X', '"_X', { desc = 'Delete char backward without yanking' })
 
 -- Disabling the arrow keys to get use to the hjkl
-vim.keymap.set({ 'n', 'i', 'v' }, '<Up>', '<Nop>')
-vim.keymap.set({ 'n', 'i', 'v' }, '<Down>', '<Nop>')
-vim.keymap.set({ 'n', 'i', 'v' }, '<Left>', '<Nop>')
-vim.keymap.set({ 'n', 'i', 'v' }, '<Right>', '<Nop>')
--- U for redo (u is undo, U is redo - makes sense!)
+-- vim.keymap.set({ 'n', 'i', 'v' }, '<Up>', '<Nop>')
+-- vim.keymap.set({ 'n', 'i', 'v' }, '<Down>', '<Nop>')
+-- vim.keymap.set({ 'n', 'i', 'v' }, '<Left>', '<Nop>')
+-- vim.keymap.set({ 'n', 'i', 'v' }, '<Right>', '<Nop>')
+-- -- U for redo (u is undo, U is redo - makes sense!)
 vim.keymap.set('n', 'U', '<C-r>', { desc = 'Redo' })
 
 vim.keymap.set('n', '<C-d>', '<C-d>zz', { desc = 'Scroll down and center' })
