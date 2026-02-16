@@ -15,12 +15,13 @@ local java_21_home = vim.fn.system('/usr/libexec/java_home -v 21'):gsub('\n', ''
 
 local config = {
   cmd = {
-    'java',
+    java_21_home .. '/bin/java',
     '-Declipse.application=org.eclipse.jdt.ls.core.id1',
     '-Dosgi.bundles.defaultStartLevel=4',
     '-Declipse.product=org.eclipse.jdt.ls.core.product',
     '-Dlog.protocol=true',
-    '-Dlog.level=ALL',
+    '-Dosgi.bundles.excludes=org.eclipse.jdt.junit.*',
+    '-Dorg.eclipse.jdt.ls.skipJunitDetection=true',
     '-Xmx1g',
     '--add-modules=ALL-SYSTEM',
     '--add-opens',
@@ -35,7 +36,16 @@ local config = {
     '-data',
     workspace_dir,
   },
+  cmd_env = {
+    JAVA_HOME = java_17_home, -- ADD THIS - force Gradle to use Java 17
+  },
   root_dir = require('jdtls.setup').find_root { '.git', 'mvnw', 'gradlew', 'pom.xml' },
+
+  on_init = function(client)
+    -- Force Gradle to use Java 17
+    client.config.settings.java.import.gradle.java.home = java_17_home
+    client.notify('workspace/didChangeConfiguration', { settings = client.config.settings })
+  end,
 
   settings = {
     java = {
@@ -77,6 +87,7 @@ local config = {
           java = {
             home = java_17_home, -- Force Gradle to use Java 17
           },
+          jvmArguments = '-Dorg.gradle.java.home=' .. java_17_home,
           arguments = '-x checkstyleMain -x test -x integrationTest --no-daemon',
         },
       },
