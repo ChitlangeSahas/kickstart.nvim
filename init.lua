@@ -475,6 +475,7 @@ require('lazy').setup({
       },
     },
   },
+  { 'mfussenegger/nvim-jdtls' },
   {
     -- Main LSP Configuration
     'neovim/nvim-lspconfig',
