@@ -88,7 +88,7 @@ local config = {
             home = java_17_home, -- Force Gradle to use Java 17
           },
           jvmArguments = '-Dorg.gradle.java.home=' .. java_17_home,
-          arguments = '-x checkstyleMain -x test -x integrationTest --no-daemon',
+          arguments = '-x checkstyleMain -x test -x integrationTest --no-daemon --parallel --max-workers=8',
         },
       },
     },
