@@ -9,13 +9,13 @@ return {
     local cwd = vim.uv.cwd()
     local basename = vim.fs.basename(cwd)
     _99.setup {
-      -- provider = _99.ClaudeCodeProvider,  -- default: OpenCodeProvider
+      provider = _99.Providers.ClaudeCodeProvider, -- default: OpenCodeProvider
       logger = {
         level = _99.DEBUG,
         path = '/tmp/' .. basename .. '.99.debug',
         print_on_error = true,
       },
-      model = 'openai/gpt-5.1-codex',
+      -- model = 'openai/gpt-5.1-codex',
       --- Completions: #rules and @files in the prompt buffer
       completion = {
         -- I am going to disable these until i understand the
