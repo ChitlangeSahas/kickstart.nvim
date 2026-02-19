@@ -413,6 +413,10 @@ require('lazy').setup({
         --   },
         -- },
         -- pickers = {}
+        --
+        defaults = {
+          path_display = { 'smart' },
+        },
         extensions = {
           ['ui-select'] = {
             require('telescope.themes').get_dropdown(),
@@ -781,6 +785,7 @@ require('lazy').setup({
         javascript = { 'prettierd', 'eslint_d', stop_after_first = true },
         typescript = { 'prettierd', 'eslint_d', stop_after_first = true },
         typescriptreact = { 'prettierd', 'eslint_d', stop_after_first = true },
+        java = { 'google-java-format' },
       },
     },
   },

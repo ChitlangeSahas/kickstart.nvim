@@ -20,6 +20,15 @@ return {
           prompt_title = 'Harpoon',
           finder = require('telescope.finders').new_table {
             results = file_paths,
+
+            entry_maker = function(entry)
+              return {
+                value = entry,
+                display = vim.fn.fnamemodify(entry, ':t'),
+                ordinal = entry,
+                path = entry,
+              }
+            end,
           },
           previewer = conf.file_previewer {},
           sorter = conf.generic_sorter {},
