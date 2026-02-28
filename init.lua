@@ -207,7 +207,20 @@ vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper win
 
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
-
+--
+-- Global folding settings
+vim.opt.foldmethod = 'expr'
+vim.opt.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+vim.opt.foldlevel = 99 -- Open all folds by default
+-- Apply foldmethod immediately on buffer entry
+vim.api.nvim_create_autocmd({ 'BufEnter', 'BufWritePost' }, {
+  callback = function()
+    if vim.treesitter.highlighter.active[vim.api.nvim_get_current_buf()] then
+      vim.opt_local.foldmethod = 'expr'
+      vim.opt_local.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+    end
+  end,
+})
 -- Highlight when yanking (copying) text
 --  Try it with `yap` in normal mode
 --  See `:help vim.hl.on_yank()`
@@ -786,10 +799,10 @@ require('lazy').setup({
         typescript = { 'prettierd', 'eslint_d', stop_after_first = true },
         typescriptreact = { 'prettierd', 'eslint_d', stop_after_first = true },
         java = { 'google-java-format' },
+        -- json = { 'fixjson' },
       },
     },
   },
-
   { -- Autocompletion
     'saghen/blink.cmp',
     event = 'VimEnter',
@@ -812,12 +825,17 @@ require('lazy').setup({
           -- `friendly-snippets` contains a variety of premade snippets.
           --    See the README about individual language/framework/plugin snippets:
           --    https://github.com/rafamadriz/friendly-snippets
-          -- {
-          --   'rafamadriz/friendly-snippets',
-          --   config = function()
-          --     require('luasnip.loaders.from_vscode').lazy_load()
-          --   end,
-          -- },
+          {
+            'rafamadriz/friendly-snippets',
+            config = function()
+              require('luasnip.loaders.from_vscode').lazy_load()
+
+              require('luasnip.loaders.from_vscode').lazy_load {
+                paths = { '~/.config/nvim/snippets' },
+                override_priority = 1001, -- default is 1000
+              }
+            end,
+          },
         },
         opts = {},
       },
@@ -999,6 +1017,8 @@ require('lazy').setup({
 
 -- custom keymaps (sahas):
 require 'custom.keymaps'
+-- custom snippets
+require 'custom.snippets.all'
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
