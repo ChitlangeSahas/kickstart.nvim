@@ -196,6 +196,13 @@ return {
           return false
         end
 
+        -- Only ever write real file buffers. claudecode.nvim's proposed-changes
+        -- buffer is `nofile` with a BufWriteCmd that ACCEPTS the diff, so an
+        -- autosave here applies edits that were only being read.
+        if vim.bo[buf].buftype ~= '' then
+          return false
+        end
+
         -- Disable auto-save for the harpoon plugin, otherwise it just opens and closes
         -- https://github.com/ThePrimeagen/harpoon/issues/434
         --

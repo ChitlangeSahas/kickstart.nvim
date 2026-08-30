@@ -16,6 +16,9 @@ vim.keymap.set('n', '<C-s>', '<C-u>zz', { desc = 'Scroll up and center' })
 -- Then you can use R for rename
 vim.keymap.set('n', 'R', vim.lsp.buf.rename, { desc = 'Rename symbol' })
 
+-- Repaint a garbled screen
+vim.keymap.set('n', '<leader>r', '<cmd>mode<CR>', { desc = 'Redraw screen' })
+
 local builtin = require 'telescope.builtin'
 vim.keymap.set('n', '<leader>pf', builtin.find_files, { desc = 'Telescope find project files' })
 vim.keymap.set('n', '<leader>ff', builtin.git_files, { desc = 'Telescope find git files' })

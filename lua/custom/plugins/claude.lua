@@ -1,5 +1,7 @@
 return {
   'coder/claudecode.nvim',
+  branch = 'main',
+  version = false,
   dependencies = { 'folke/snacks.nvim' },
   config = true,
   -- `cmd` lets lazy.nvim create command stubs that load the plugin on first use,
@@ -26,6 +28,8 @@ return {
     { '<leader>a', nil, desc = 'AI/Claude Code' },
     { '<leader>ac', '<cmd>ClaudeCode<cr>', desc = 'Toggle Claude' },
     { '<leader>af', '<cmd>ClaudeCodeFocus<cr>', desc = 'Focus Claude' },
+    -- Works from terminal mode too, so it jumps both ways without Esc
+    { '<C-Space>', '<cmd>ClaudeCodeFocus<cr>', mode = { 'n', 't' }, desc = 'Toggle Claude focus' },
     { '<leader>ar', '<cmd>ClaudeCode --resume<cr>', desc = 'Resume Claude' },
     { '<leader>aC', '<cmd>ClaudeCode --continue<cr>', desc = 'Continue Claude' },
     { '<leader>am', '<cmd>ClaudeCodeSelectModel<cr>', desc = 'Select Claude model' },
