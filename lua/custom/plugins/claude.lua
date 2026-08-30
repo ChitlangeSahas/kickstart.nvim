@@ -2,6 +2,9 @@ return {
   'coder/claudecode.nvim',
   branch = 'main',
   version = false,
+  -- Pinned: the config below patches plugin internals. See the TODO by
+  -- `resolve_inline_as_saved`. Bump deliberately, then re-check that patch.
+  commit = '2390c6e45c4789072c293ac69de051d169668b29',
   dependencies = { 'folke/snacks.nvim' },
   -- Route the CLI through caveman so sessions get compressed tool output
   opts = {
@@ -9,8 +12,15 @@ return {
     -- One buffer with +/- lines instead of two panes side by side. The split
     -- layout leaves ~40 columns per side next to the terminal, which wraps
     -- every real line of C.
+    terminal = {
+      split_side = 'right',
+      split_width_percentage = 0.4,
+    },
     diff_opts = {
       layout = 'unified',
+      -- The plugin otherwise re-applies its own terminal width every time the
+      -- terminal is focused or a diff opens and closes, undoing a manual drag.
+      auto_resize_terminal = false,
       -- A new tab starts with an empty [No Name] window that the diff and the
       -- terminal then sit beside, so the leftmost third of the screen stays
       -- blank. Reusing the current tab avoids it.
@@ -30,6 +40,165 @@ return {
       callback = function(args)
         if vim.b[args.buf].claudecode_diff_tab_name then
           vim.bo[args.buf].modified = false
+        end
+      end,
+    })
+
+    -- The plugin only lays diffs out as splits. Float the window it just made,
+    -- centred and large, so a review is one focused surface instead of a strip
+    -- squeezed between the file and the terminal. Accept and deny still work:
+    -- the buffer and window handles are unchanged, only the geometry moves.
+    vim.api.nvim_create_autocmd('User', {
+      pattern = 'ClaudeCodeDiffOpened',
+      callback = function(args)
+        local win = args.data and args.data.diff_window
+        if not win or not vim.api.nvim_win_is_valid(win) then
+          return
+        end
+
+        local width = math.floor(vim.o.columns * 0.85)
+        local height = math.floor(vim.o.lines * 0.85)
+
+        -- Path relative to the cwd, so the title says which file without
+        -- spending half the border on a home directory prefix.
+        local path = args.data.file_path or ''
+        local title = path ~= '' and vim.fn.fnamemodify(path, ':.') or 'diff'
+
+        pcall(vim.api.nvim_win_set_config, win, {
+          relative = 'editor',
+          width = width,
+          height = height,
+          row = math.floor((vim.o.lines - height) / 2),
+          col = math.floor((vim.o.columns - width) / 2),
+          border = 'rounded',
+          title = ' ' .. title .. ' ',
+          title_pos = 'center',
+        })
+        pcall(vim.api.nvim_set_current_win, win)
+      end,
+    })
+
+    -- The unified diff buffer ships read-only: accept reads the snapshot taken
+    -- when the diff opened, not the buffer, so any edit would be silently
+    -- discarded. Refresh that snapshot from the live buffer first and the
+    -- buffer can be unlocked.
+    --
+    -- The +/- markers live in a parallel line_types array built at open, so an
+    -- edited buffer has to be realigned against it or the wrong lines get kept.
+    -- `vim.diff` does that alignment: untouched lines keep their type, an
+    -- equal-length rewrite keeps the type of the line it replaced, and anything
+    -- else counts as new text to keep. Lines you insert are kept; the `-` lines
+    -- are still dropped.
+    -- TODO: this monkey-patches plugin internals, written against
+    -- v0.3.0-53-g2390c6e (2390c6e4, 2026-06-25), the commit pinned in
+    -- lazy-lock.json. `resolve_inline_as_saved` and `diff_data.new_buffer` are
+    -- both private: a renamed function fails loudly at startup, but a renamed
+    -- field fails silently and edits go back to being discarded. If editing a
+    -- diff stops sticking after an update, look here first. Drop this once
+    -- claudecode.nvim supports editable unified diffs upstream.
+    local inline = require 'claudecode.diff_inline'
+    local resolve_as_saved = inline.resolve_inline_as_saved
+
+    -- Walks the hunks `vim.diff` reports between the rendered lines and the
+    -- edited ones, returning a line_types array for the edited buffer.
+    local function realign_types(lines, line_types, live)
+      local hunks = vim.diff(table.concat(lines, '\n') .. '\n', table.concat(live, '\n') .. '\n', { result_type = 'indices' })
+
+      if not hunks then
+        return nil
+      end
+
+      local types = {}
+      local old_line, new_line = 1, 1
+
+      for _, hunk in ipairs(hunks) do
+        local old_start, old_count, _, new_count = hunk[1], hunk[2], hunk[3], hunk[4]
+
+        -- A pure insertion reports the line it follows rather than one it
+        -- covers, so the untouched run reaches one line further.
+        local stop = old_count > 0 and old_start or old_start + 1
+
+        while old_line < stop do
+          types[new_line] = line_types[old_line]
+          old_line, new_line = old_line + 1, new_line + 1
+        end
+
+        for offset = 0, new_count - 1 do
+          -- Same number of lines in and out means every one replaces a line
+          -- whose role is known, which is the in-place edit case.
+          types[new_line + offset] = old_count == new_count and line_types[old_line + offset] or 'added'
+        end
+
+        old_line, new_line = old_line + old_count, new_line + new_count
+      end
+
+      while new_line <= #live do
+        types[new_line] = line_types[old_line]
+        old_line, new_line = old_line + 1, new_line + 1
+      end
+
+      return types
+    end
+
+    inline.resolve_inline_as_saved = function(tab_name, diff_data)
+      local buf = diff_data and diff_data.new_buffer
+
+      if buf and vim.api.nvim_buf_is_valid(buf) then
+        local live = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+        local types = realign_types(diff_data.lines, diff_data.line_types, live)
+
+        if types then
+          diff_data.lines, diff_data.line_types = live, types
+        else
+          vim.notify('claudecode: could not realign the edited diff, accepting the original', vim.log.levels.WARN)
+        end
+      end
+
+      return resolve_as_saved(tab_name, diff_data)
+    end
+
+    vim.api.nvim_create_autocmd('User', {
+      pattern = 'ClaudeCodeDiffOpened',
+      callback = function(args)
+        local buf = args.data and args.data.diff_window and vim.api.nvim_win_get_buf(args.data.diff_window)
+
+        if buf and vim.b[buf].claudecode_inline_diff then
+          vim.bo[buf].modifiable = true
+        end
+      end,
+    })
+
+    -- Accepting or denying a diff leaves the cursor in the file, so the next
+    -- prompt needs a manual hop back. Return focus to Claude instead. Skipped
+    -- when one diff replaced another, where focus belongs on the new diff.
+    vim.api.nvim_create_autocmd('User', {
+      pattern = 'ClaudeCodeDiffClosed',
+      callback = function(args)
+        local reason = args.data and args.data.reason or ''
+        if reason:match('^replaced') or reason:match('^setup failed') then
+          return
+        end
+
+        vim.schedule(function()
+          pcall(vim.cmd, 'ClaudeCodeFocus')
+        end)
+      end,
+    })
+
+    -- A terminal window only auto-follows its output while the cursor is on the
+    -- last line. Leaving the window drops terminal-mode for normal mode and
+    -- leaves the cursor behind, so output scrolls past it and the view sits
+    -- half way up until you click back in. Park the cursor at the end on the
+    -- way out and it keeps following.
+    vim.api.nvim_create_autocmd({ 'TermLeave', 'WinLeave' }, {
+      callback = function(args)
+        if vim.bo[args.buf].buftype ~= 'terminal' then
+          return
+        end
+
+        local win = vim.fn.bufwinid(args.buf)
+        if win ~= -1 then
+          pcall(vim.api.nvim_win_set_cursor, win, { vim.api.nvim_buf_line_count(args.buf), 0 })
         end
       end,
     })
