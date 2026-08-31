@@ -689,7 +689,16 @@ require('lazy').setup({
       --  - settings (table): Override the default settings passed when initializing the server.
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
       local servers = {
-        -- clangd = {},
+        clangd = {
+          cmd = {
+            'clangd',
+            '--background-index',
+            '--clang-tidy',
+            -- previous (glob form, did not match in practice):
+            -- '--query-driver=/opt/nordic/ncs/toolchains/*/opt/zephyr-sdk/arm-zephyr-eabi/bin/arm-zephyr-eabi-*,/usr/local/bin/arm-none-eabi-*,/usr/local/gcc-arm-none-eabi-*/bin/arm-none-eabi-*,/opt/homebrew/bin/arm-none-eabi-*',
+            '--query-driver=/usr/local/bin/arm-none-eabi-gcc,/opt/nordic/ncs/toolchains/185bb0e3b6/opt/zephyr-sdk/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc',
+          },
+        },
         -- gopls = {},
         -- pyright = {},
         -- rust_analyzer = {},
@@ -734,6 +743,7 @@ require('lazy').setup({
       local ensure_installed = vim.tbl_keys(servers or {})
       vim.list_extend(ensure_installed, {
         'stylua', -- Used to format Lua code
+        'clangd',
         'pyright',
         'isort',
         'eslint_d',
@@ -792,7 +802,7 @@ require('lazy').setup({
       formatters_by_ft = {
         lua = { 'stylua' },
         -- Conform can also run multiple formatters sequentially
-        python = { 'isort', 'black' },
+        python = { 'ruff_organize_imports', 'ruff_format' },
         --
         -- You can use 'stop_after_first' to run the first available formatter from the list
         javascript = { 'prettierd', 'eslint_d', stop_after_first = true },
