@@ -44,6 +44,16 @@ return {
       end,
     })
 
+    -- Which file the open diff is about and where its first change is, so
+    -- ClaudeCodeDiffClosed can show that spot once the diff goes away. Closed
+    -- carries neither.
+    --
+    -- The plugin parks the diff cursor on the first line whose type is not
+    -- "unchanged". Every line above it is unchanged by definition, so that
+    -- index is the same in the file as in the diff.
+    local last_diff_file
+    local last_diff_line
+
     -- The plugin only lays diffs out as splits. Float the window it just made,
     -- centred and large, so a review is one focused surface instead of a strip
     -- squeezed between the file and the terminal. Accept and deny still work:
@@ -51,10 +61,15 @@ return {
     vim.api.nvim_create_autocmd('User', {
       pattern = 'ClaudeCodeDiffOpened',
       callback = function(args)
+        last_diff_file = args.data and args.data.file_path
+
         local win = args.data and args.data.diff_window
         if not win or not vim.api.nvim_win_is_valid(win) then
           return
         end
+
+        local ok, cursor = pcall(vim.api.nvim_win_get_cursor, win)
+        last_diff_line = ok and cursor[1] or nil
 
         local width = math.floor(vim.o.columns * 0.85)
         local height = math.floor(vim.o.lines * 0.85)
@@ -168,9 +183,23 @@ return {
       end,
     })
 
+    -- The window the diff floated over, i.e. the first ordinary editor window
+    -- in this tab: not a float, not the terminal.
+    local function editor_window()
+      for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+        local config = vim.api.nvim_win_get_config(win)
+        local buf = vim.api.nvim_win_get_buf(win)
+
+        if config.relative == '' and vim.bo[buf].buftype == '' then
+          return win
+        end
+      end
+    end
+
     -- Accepting or denying a diff leaves the cursor in the file, so the next
-    -- prompt needs a manual hop back. Return focus to Claude instead. Skipped
-    -- when one diff replaced another, where focus belongs on the new diff.
+    -- prompt needs a manual hop back. Show the file that was just reviewed and
+    -- return focus to Claude. Skipped when one diff replaced another, where
+    -- focus belongs on the new diff.
     vim.api.nvim_create_autocmd('User', {
       pattern = 'ClaudeCodeDiffClosed',
       callback = function(args)
@@ -179,8 +208,36 @@ return {
           return
         end
 
+        local path, line = last_diff_file, last_diff_line
+        last_diff_file, last_diff_line = nil, nil
+
         vim.schedule(function()
+          -- Focus first: :edit fires a long chain of autocmds, and running it
+          -- beforehand was enough to lose the terminal buffer, after which
+          -- ClaudeCodeFocus spawns a second Claude instead of returning to the
+          -- one that is already there.
           pcall(vim.cmd, 'ClaudeCodeFocus')
+
+          local win = path and editor_window()
+
+          -- Edited from that window rather than the current one, so the cursor
+          -- stays where ClaudeCodeFocus just put it.
+          if win then
+            vim.api.nvim_win_call(win, function()
+              if not pcall(vim.cmd.edit, path) then
+                return
+              end
+
+              -- Clamped: a denied deletion at the end of a file leaves the
+              -- recorded line past the last one.
+              local target = math.min(line or 1, vim.api.nvim_buf_line_count(0))
+
+              pcall(vim.api.nvim_win_set_cursor, win, { target, 0 })
+              -- zz from inside win_call, so it centres that window rather than
+              -- the terminal the cursor is really in.
+              vim.cmd 'normal! zz'
+            end)
+          end
         end)
       end,
     })
