@@ -8,7 +8,7 @@ return {
   dependencies = { 'folke/snacks.nvim' },
   -- Route the CLI through caveman so sessions get compressed tool output
   opts = {
-    terminal_cmd = 'caveman claude',
+    terminal_cmd = 'claude',
     -- One buffer with +/- lines instead of two panes side by side. The split
     -- layout leaves ~40 columns per side next to the terminal, which wraps
     -- every real line of C.
@@ -204,7 +204,7 @@ return {
       pattern = 'ClaudeCodeDiffClosed',
       callback = function(args)
         local reason = args.data and args.data.reason or ''
-        if reason:match('^replaced') or reason:match('^setup failed') then
+        if reason:match '^replaced' or reason:match '^setup failed' then
           return
         end
 
